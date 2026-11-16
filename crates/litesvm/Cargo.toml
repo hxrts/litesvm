@@ -62,7 +62,7 @@ solana-fee = { workspace = true, features = ["agave-unstable-api"] }
 # Keep this direct dependency pinned to constrain the transitive
 # Solana wincode graph to the 0.6.x-compatible fee-calculator line.
 solana-fee-calculator.workspace = true
-solana-feature-gate-interface = { workspace = true, features = ["bincode"] }
+solana-feature-gate-interface = { workspace = true, features = ["serde", "wincode"] }
 solana-fee-structure.workspace = true
 solana-hash.workspace = true
 solana-instruction.workspace = true
@@ -106,6 +106,8 @@ nom = { workspace = true, optional = true }
 wincode.workspace = true
 
 [dev-dependencies]
+# Tests use bincode account state helpers; dev-only so consumers keep wincode.
+solana-account = { workspace = true, features = ["bincode"] }
 criterion.workspace = true
 ed25519-dalek.workspace = true
 libsecp256k1.workspace = true

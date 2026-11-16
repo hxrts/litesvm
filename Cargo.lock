@@ -3564,7 +3564,6 @@ version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3e429812a07f338b834f5fb14ecacc94750e1c3efcc6af8ad8d6c22ffc526af0"
 dependencies = [
- "bincode",
  "serde",
  "serde_derive",
  "solana-account",
@@ -3574,6 +3573,7 @@ dependencies = [
  "solana-pubkey 4.4.0",
  "solana-sdk-ids",
  "solana-system-interface",
+ "wincode",
 ]
 
 [[package]]
