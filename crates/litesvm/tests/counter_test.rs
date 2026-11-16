@@ -6,7 +6,8 @@ use {
         create_lookup_table, extend_lookup_table,
     },
     solana_clock::Clock,
-    solana_instruction::{account_meta::AccountMeta, error::InstructionError, Instruction},
+    solana_instruction::{account_meta::AccountMeta, Instruction},
+    solana_instruction_error::InstructionError,
     solana_keypair::Keypair,
     solana_message::{
         v0::Message as MessageV0, AddressLookupTableAccount, Message, VersionedMessage,

@@ -651,7 +651,7 @@ impl LiteSVM {
         self.set_sysvar(&SlotHashes::new(&[(
             self.accounts.sysvar_cache.get_clock().unwrap().slot,
             latest_blockhash,
-        )]));
+        ).into()]));
         self.set_sysvar(&SlotHistory::default());
         self.set_sysvar(&StakeHistory::default());
 
@@ -740,7 +740,7 @@ impl LiteSVM {
                 .enable_feature_id
                 .is_none_or(|x| self.feature_set.is_active(&x))
         }) {
-            let loaded_program = ProgramCacheEntry::new_builtin(0, builtin.register_fn);
+            let loaded_program = ProgramCacheEntry::new_builtin(builtin.register_fn);
             self.accounts
                 .programs_cache
                 .replenish(builtin.program_id, Arc::new(loaded_program));
@@ -1047,14 +1047,7 @@ impl LiteSVM {
 
     /// Adds a builtin program to the test environment.
     pub fn add_builtin(&mut self, program_id: Address, entrypoint: BuiltinFunctionRegisterer) {
-        let builtin = ProgramCacheEntry::new_builtin(
-            self.accounts
-                .sysvar_cache
-                .get_clock()
-                .unwrap_or_default()
-                .slot,
-            entrypoint,
-        );
+        let builtin = ProgramCacheEntry::new_builtin(entrypoint);
 
         self.accounts
             .programs_cache
@@ -1212,7 +1205,7 @@ impl LiteSVM {
         accounts: Vec<(Address, AccountSharedData)>,
         number_of_top_level_instructions: usize,
     ) -> TransactionContext<'_> {
-        TransactionContext::new(
+        TransactionContext::new_with_feature_flags(
             accounts,
             self.accounts
                 .sysvar_cache
@@ -1223,6 +1216,8 @@ impl LiteSVM {
             compute_budget.max_instruction_stack_depth,
             compute_budget.max_instruction_trace_length,
             number_of_top_level_instructions,
+            solana_transaction_context::transaction::ComputeMeter::new(compute_budget.compute_unit_limit),
+            solana_transaction_context::DropOnBailOut::Disabled,
         )
     }
 
