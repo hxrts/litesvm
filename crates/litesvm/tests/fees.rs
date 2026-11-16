@@ -1,7 +1,7 @@
 use {
     litesvm::LiteSVM,
     solana_address::{address, Address},
-    solana_instruction::{Instruction},
+    solana_instruction::Instruction,
     solana_instruction_error::InstructionError,
     solana_keypair::Keypair,
     solana_message::Message,

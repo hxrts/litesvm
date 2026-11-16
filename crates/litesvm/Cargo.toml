@@ -37,7 +37,6 @@ agave-reserved-account-keys = { workspace = true, features = [
     "agave-unstable-api",
 ] }
 solana-syscalls.workspace = true
-ansi_term.workspace = true
 hashbrown = { workspace = true, optional = true }
 indexmap.workspace = true
 itertools.workspace = true

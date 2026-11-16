@@ -1,4 +1,4 @@
-use {ansi_term::Colour, std::fmt::Write};
+use std::fmt::Write;
 
 const PROGRAM_LOG: &str = "Program log:";
 
@@ -33,14 +33,18 @@ fn get_importance(program_source: &str, program_log: &str) -> Importance {
     }
 }
 
+/// Wrap `log` in an ANSI SGR sequence (the same escapes `ansi_term` emitted).
+fn paint(sgr: &str, log: &str) -> String {
+    format!("\x1b[{sgr}m{log}\x1b[0m")
+}
+
 fn colourise(importance: Importance, log: &str) -> String {
     match importance {
-        Importance::Error => Colour::Fixed(9).bold().paint(log),
-        Importance::VeryHigh => Colour::Green.paint(log),
-        Importance::High => Colour::Fixed(243).bold().paint(log),
-        Importance::Low => Colour::Fixed(239).paint(log),
+        Importance::Error => paint("1;38;5;9", log),
+        Importance::VeryHigh => paint("32", log),
+        Importance::High => paint("1;38;5;243", log),
+        Importance::Low => paint("38;5;239", log),
     }
-    .to_string()
 }
 
 fn format_line(line: &str) -> String {
