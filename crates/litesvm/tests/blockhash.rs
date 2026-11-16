@@ -95,3 +95,38 @@ fn test_durable_nonce() {
         TransactionError::BlockhashNotFound
     );
 }
+
+#[test]
+fn recent_blockhashes_stay_valid_for_max_processing_age() {
+    let payer = Keypair::new();
+    let to = Address::new_unique();
+    let mut svm = LiteSVM::new();
+    svm.airdrop(&payer.pubkey(), 1_000_000_000).unwrap();
+
+    let send = |svm: &mut LiteSVM, blockhash, lamports| {
+        let msg = Message::new_with_blockhash(
+            &[transfer(&payer.pubkey(), &to, lamports)],
+            Some(&payer.pubkey()),
+            &blockhash,
+        );
+        svm.send_transaction(Transaction::new(&[&payer], msg, blockhash))
+    };
+
+    // A blockhash stays usable after a newer one is issued.
+    let old = svm.latest_blockhash();
+    svm.expire_blockhash();
+    assert_ne!(svm.latest_blockhash(), old);
+    send(&mut svm, old, 1_000_000).unwrap();
+
+    // It is rejected once 150 newer blockhashes have been issued.
+    let stale = svm.latest_blockhash();
+    for _ in 0..151 {
+        svm.expire_blockhash();
+    }
+    assert_eq!(
+        send(&mut svm, stale, 2_000_000).unwrap_err().err,
+        TransactionError::BlockhashNotFound
+    );
+    let latest = svm.latest_blockhash();
+    send(&mut svm, latest, 3_000_000).unwrap();
+}

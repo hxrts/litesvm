@@ -434,14 +434,19 @@ pub const MAINNET_DEFAULT_SLOT: u64 = {
     }
     max
 };
+/// Agave's `MAX_PROCESSING_AGE`: how many earlier blockhashes stay valid.
+const MAX_RECENT_BLOCKHASHES: usize = 150;
 
 #[derive(Clone)]
+
 pub struct LiteSVM {
     accounts: AccountsDb,
     airdrop_kp: [u8; 64],
     feature_set: FeatureSet,
     reserved_account_keys: ReservedAccountKeys,
     latest_blockhash: Hash,
+    /// Previous blockhashes still valid for new transactions, newest last.
+    recent_blockhashes: std::collections::VecDeque<Hash>,
     history: TransactionHistory,
     compute_budget: Option<ComputeBudget>,
     sigverify: bool,
@@ -484,6 +489,7 @@ impl LiteSVM {
             reserved_account_keys: Self::reserved_account_keys_for_feature_set(&feature_set),
             feature_set,
             latest_blockhash: create_blockhash(b"genesis"),
+            recent_blockhashes: std::collections::VecDeque::new(),
             history: TransactionHistory::new(),
             compute_budget: None,
             sigverify: false,
@@ -651,7 +657,8 @@ impl LiteSVM {
         self.set_sysvar(&SlotHashes::new(&[(
             self.accounts.sysvar_cache.get_clock().unwrap().slot,
             latest_blockhash,
-        ).into()]));
+        )
+            .into()]));
         self.set_sysvar(&SlotHistory::default());
         self.set_sysvar(&StakeHistory::default());
 
@@ -1216,7 +1223,9 @@ impl LiteSVM {
             compute_budget.max_instruction_stack_depth,
             compute_budget.max_instruction_trace_length,
             number_of_top_level_instructions,
-            solana_transaction_context::transaction::ComputeMeter::new(compute_budget.compute_unit_limit),
+            solana_transaction_context::transaction::ComputeMeter::new(
+                compute_budget.compute_unit_limit,
+            ),
             solana_transaction_context::DropOnBailOut::Disabled,
         )
     }
@@ -1675,6 +1684,13 @@ impl LiteSVM {
 
     /// Expires the current blockhash.
     pub fn expire_blockhash(&mut self) {
+        // Like an Agave bank, keep the previous blockhashes valid for
+        // MAX_PROCESSING_AGE blocks so transactions signed against them still
+        // land; the latest is always valid.
+        self.recent_blockhashes.push_back(self.latest_blockhash);
+        while self.recent_blockhashes.len() > MAX_RECENT_BLOCKHASHES {
+            self.recent_blockhashes.pop_front();
+        }
         self.latest_blockhash = create_blockhash(&self.latest_blockhash.to_bytes());
         #[allow(deprecated)]
         self.set_sysvar(&RecentBlockhashes::from_iter([IterItem(
@@ -1707,6 +1723,7 @@ impl LiteSVM {
     ) -> solana_transaction_error::TransactionResult<()> {
         let recent_blockhash = tx.message().recent_blockhash();
         if recent_blockhash == &self.latest_blockhash
+            || self.recent_blockhashes.contains(recent_blockhash)
             || self.check_transaction_for_nonce(
                 tx,
                 &DurableNonce::from_blockhash(&self.latest_blockhash),
